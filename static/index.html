@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Necessaire IA · Sua make, suas possibilidades</title><link rel="stylesheet" href="/static/style.css"><script src="/static/app.js" defer></script></head>
+<body>
+<header><a class="brand" href="/">nécessaire<span>IA</span></a><span class="header-note">BELEZA DO SEU JEITO</span></header>
+<main>
+<section class="intro"><div class="eyebrow">SUA NECESSAIRE. NOVAS IDEIAS.</div><h1>Uma make para o momento.<br><em>Com o que você já tem.</em></h1><p>Conte seus planos, escolha seus produtos e receba um passo a passo pensado para você.</p></section>
+<div class="workspace">
+<section class="form-card" aria-labelledby="form-title"><div class="section-top"><span class="number">01</span><h2 id="form-title">Vamos conhecer sua make</h2></div>
+<form id="make-form">
+<fieldset id="fields"><div class="pair"><div><label for="ocasiao">Qual é a ocasião?</label><input id="ocasiao" name="ocasiao" maxlength="100" required placeholder="Ex.: festa à noite" autocomplete="off"></div><div><label for="estilo">Que estilo você quer?</label><input id="estilo" name="estilo" maxlength="100" required placeholder="Ex.: natural, marcante, romântico" autocomplete="off"></div></div>
+<div class="pair"><div><label for="nivel">Sua experiência</label><select id="nivel" name="nivel"><option value="iniciante">Estou começando</option><option value="intermediario">Já tenho prática</option><option value="avancado">Tenho bastante experiência</option></select></div><div><label for="tempo">Tempo disponível (minutos)</label><input id="tempo" name="tempo_minutos" type="number" min="5" max="120" step="1" value="15" required><small>De 5 a 120 minutos.</small></div></div>
+<label for="produtos">O que tem na sua necessaire?</label><p class="hint" id="products-help">Separe os produtos por vírgula ou por linha. Inclua as cores, se quiser.</p><textarea id="produtos" name="produtos" rows="4" maxlength="2200" required aria-describedby="products-help" placeholder="Corretivo, blush rosado, máscara de cílios, batom vermelho"></textarea>
+<small>De 1 a 20 produtos, até 100 caracteres por produto.</small>
+<button id="submit" class="primary" type="submit">Criar meu passo a passo <span aria-hidden="true">↗</span></button>
+<button id="example" class="text-button" type="button">Preencher com um exemplo</button>
+</fieldset>
+<p class="privacy">Ao gerar, suas escolhas são enviadas ao Gemini para criar o plano.</p>
+</form></section>
+<section class="result-card" id="result-region" aria-labelledby="result-heading" aria-busy="false">
+<div class="section-top"><span class="number">02</span><h2 id="result-heading">Seu momento de beleza</h2></div>
+<div id="empty" class="empty"><div class="spark" aria-hidden="true">✧</div><h3>Uma nova ideia<br>para a sua necessaire.</h3><p>Seu passo a passo aparece aqui.<br>Vamos começar pelos produtos que você tem?</p><div class="pill">SEUS PRODUTOS · SEU TEMPO · SEU ESTILO</div></div>
+<div id="loading" hidden><div class="spinner" aria-hidden="true"></div><h3>Preparando sua make…</h3><p>A IA está combinando seus produtos e preferências. Pode levar alguns segundos.</p></div>
+<p id="status" class="sr-only" role="status" aria-live="polite"></p>
+<div id="error" class="error" role="alert" hidden></div>
+<article id="result" hidden tabindex="-1"><div id="duration" class="pill"></div><h3 id="title"></h3><p id="proposal"></p><ol id="steps"></ol><aside class="simple"><span class="eyebrow">QUER SIMPLIFICAR?</span><p id="simple-text"></p></aside><p class="result-note">Sugestão gerada por IA. Os tempos são estimados; adapte à sua prática e siga as indicações dos produtos.</p></article>
+</section></div>
+<footer><span>Menos dúvidas. Mais possibilidades.</span><span>Necessaire IA · Projeto acadêmico</span></footer>
+</main></body></html>
