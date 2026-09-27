@@ -1,127 +1,165 @@
-# Necessaire IA
+# Necessaire IA — Trabalho 1
 
-Assistente de maquiagem que cria um passo a passo com os produtos que a pessoa já possui, considerando ocasião, estilo, experiência e tempo. Projeto da categoria **Geração de Conteúdo**.
+API Web em Python que integra o Gemini para gerar um plano de maquiagem com os produtos disponíveis, considerando ocasião, estilo, experiência e tempo. Categoria: **Geração de Conteúdo**.
 
-## Funcionalidades e validação
+**Esta entrega e sua apresentação têm foco no backend. O consumo da API é demonstrado pelo Swagger.** A interface experimental em `static/` está preservada no repositório, mas não é necessária para acompanhar a demonstração do Trabalho 1. Não há deploy público: a execução é local.
 
-API Python implementada, com documentação interativa para experimentar no navegador. Integração Gemini confirmada em 24/09/2026 com uma consulta real: HTTP 200, quatro produtos informados e etapas somando 15 minutos. Novas instalações precisam configurar chave e modelo no .env. Testes usam respostas simuladas explicitamente; não comprovam a qualidade de uma IA real. Interface disponível em http://127.0.0.1:8000/, com formulário, carregamento, mensagens de erro e etapas organizadas.
+## Arquitetura
 
-## Entenda o caminho
+Pedido JSON pelo Swagger → validação com Pydantic → prompt e consulta HTTP ao Gemini → validação do JSON retornado, produtos das etapas e tempo total → resposta HTTP.
 
-Pessoa preenche pedido → FastAPI valida os campos → servidor envia pedido ao Gemini → servidor confere o JSON, os produtos das etapas e o tempo total → pessoa recebe o plano.
+- `main.py`: modelos, rotas, prompt, integração e tratamento de erros.
+- `demo.py`: processo separado que simula falhas do provedor, usando o mesmo tratamento de erros.
+- `test_api.py`: testes automatizados sem consultas reais ao Gemini.
+- `exemplo.json`: pedido válido para a demonstração.
+- `.env.example`: modelo de configuração sem segredos.
+- `requirements.txt`: dependências com versões definidas.
+- `static/`: interface experimental preservada, fora do foco desta apresentação.
 
-- `main.py`: campos, rotas, prompt e chamada à IA.
-- `exemplo.json`: pedido pronto para testar.
-- `.env`: configuração privada (você cria a partir de `.env.example`).
-- `test_api.py`: testes locais sem gastar créditos de IA.
-
-API é a parte que recebe pedidos e devolve respostas. Uma rota é um endereço dessa API. JSON é um formato de dados com campos e valores. Prompt é o conjunto de instruções que enviamos ao modelo.
+Tecnologias: Python, FastAPI, Pydantic, HTTPX, Uvicorn e python-dotenv.
 
 ## Executar no Windows
 
-Com Python 3.11 ou superior instalado (testado também com Python 3.14 no Windows), obtenha o projeto:
+Pré-requisitos: Python 3.11 ou superior (testado com 3.12 e 3.14), Git e acesso à API Gemini para as consultas reais.
 
 ```powershell
 git clone https://github.com/miyamiyashiro/necessaire-ia.git
 cd necessaire-ia
-```
-
-Crie o ambiente e instale as bibliotecas, uma linha de cada vez:
-
-```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Na primeira configuração, copie `.env.example` para `.env`. **Se `.env` já existir, preserve-o.**
+
+```powershell
 Copy-Item .env.example .env
 ```
 
-Se `.env` já existir, preserve-o. Abra esse arquivo localmente e preencha `GEMINI_API_KEY` com sua própria chave e `GEMINI_MODEL` com um modelo disponível na sua conta. Nos testes de 24/09/2026, usamos `gemini-3.1-flash-lite` com sucesso. Disponibilidade e quotas podem mudar.
+Preencha localmente:
 
-Em seguida, inicie:
+```dotenv
+GEMINI_API_KEY=sua_chave_privada
+GEMINI_MODEL=gemini-3.1-flash-lite
+```
+
+O modelo acima funcionou nos testes de setembro de 2026. Disponibilidade, quotas e custos dependem do provedor e da conta. Obtenha sua própria chave no [Google AI Studio](https://aistudio.google.com/apikey). Não publique o `.env`, nem exponha a chave em prints, slides ou no código. O `.gitignore` exclui o `.env`, ambientes virtuais e caches.
+
+Inicie o backend:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn main:app --reload
 ```
 
-Abra http://127.0.0.1:8000/ para usar o formulário. Mantenha o terminal aberto enquanto utiliza a aplicação. Alterações no `.env` exigem reiniciar o servidor.
+Abra **http://127.0.0.1:8000/docs**. Mantenha o terminal aberto; Ctrl+C encerra o servidor. Reinicie-o após alterar o `.env`. O parâmetro `--reload` é destinado ao desenvolvimento local.
 
-Abra http://127.0.0.1:8000/docs. Essa é a página de testes da API. Expanda `POST /maquiagens`, clique em **Try it out**, cole o conteúdo de `exemplo.json` e clique em **Execute**.
+## Rotas
 
-Sem configurar a IA, esse pedido retorna 503 com uma orientação. Isso é esperado; a aplicação não finge que gerou conteúdo. `GET /saude` funciona sem chave. Pare o servidor com Ctrl+C.
-
-## Conectar a IA
-
-Obtenha sua chave no Google AI Studio e consulte os modelos disponíveis para sua conta. Confira quotas e custos antes de usar. No arquivo `.env`, preencha `GEMINI_API_KEY` e `GEMINI_MODEL`, depois reinicie o servidor. Não envie a chave em conversas, slides ou no GitHub.
-
-Documentação oficial: https://ai.google.dev/gemini-api/docs/api-key
-
-Saída estruturada usada nesta implementação: https://ai.google.dev/gemini-api/docs/generate-content/structured-output
-
-FastAPI e validação do pedido: https://fastapi.tiangolo.com/tutorial/body/
-
-## Rotas e variáveis
-
-| Rota | O que faz |
+| Método e rota | Função |
 |---|---|
-| GET / | Abre a interface do Necessaire IA |
-| GET /saude | Indica que o servidor responde e se existe uma chave configurada (não valida a chave) |
-| POST /maquiagens | Gera um plano a partir do pedido |
-| GET /docs | Documenta campos e permite fazer pedidos |
+| GET `/saude` | Verifica se a API responde e se há uma chave não vazia configurada. Não valida a chave nem consulta o Gemini. |
+| POST `/maquiagens` | Recebe o pedido, consulta o Gemini e retorna o plano validado. |
+| GET `/docs` | Swagger: documentação interativa para testar as rotas. |
+| GET `/openapi.json` | Especificação da API. |
 
-| Variável | Uso |
+`/saúde` foi mantido como alias de compatibilidade, fora do Swagger. A raiz `/` ainda abre a interface experimental, que não será usada na apresentação.
+
+A aplicação não armazena planos. Por isso não possui operações de atualização ou exclusão de planos (PUT/DELETE).
+
+## Pedido e resposta
+
+No Swagger, expanda POST `/maquiagens`, clique em **Try it out**, use o exemplo e clique em **Execute**:
+
+```json
+{
+  "ocasiao": "Festa à noite",
+  "estilo": "Marcante",
+  "nivel": "iniciante",
+  "tempo_minutos": 15,
+  "produtos": ["corretivo", "blush", "máscara de cílios", "batom vermelho"]
+}
+```
+
+A resposta 200 contém `titulo`, `proposta`, `etapas` (produto, instrução e minutos) e `opcao_simples`. O texto varia entre gerações. A aplicação confere os nomes dos produtos declarados nas etapas e se a soma dos minutos não ultrapassa o tempo solicitado.
+
+## Validações e erros
+
+- `ocasiao` e `estilo`: textos de 1 a 100 caracteres; espaços nas pontas são removidos.
+- `nivel`: exatamente `iniciante`, `intermediario` ou `avancado`.
+- `tempo_minutos`: inteiro de 5 a 120; texto, booleano e número decimal são recusados.
+- `produtos`: lista de 1 a 20 textos não vazios, até 100 caracteres cada.
+- O literal `string` e textos compostos apenas por caracteres invisíveis são recusados nos campos de entrada textual.
+- Campos extras, ausentes ou de tipo incorreto são recusados antes da consulta ao Gemini.
+- O POST exige Content-Type JSON e limita o corpo a 16.000 bytes, inclusive quando recebido em partes.
+- A resposta da IA precisa seguir a estrutura de `Plano`; textos vazios, campos extras, produtos de etapas fora da lista e tempo excedido são recusados.
+
+| Código | Significado |
 |---|---|
-| GEMINI_API_KEY | Chave privada, apenas no servidor |
-| GEMINI_MODEL | Identificador do modelo com suporte a saída estruturada |
+| 200 | Plano gerado e aprovado nas verificações implementadas. |
+| 400 | Entrada inválida ou JSON malformado; a mensagem identifica os campos. |
+| 404 | Rota inexistente. |
+| 405 | Método HTTP inadequado para a rota. |
+| 413 | Corpo maior que o permitido. |
+| 415 | Tipo de conteúdo diferente de JSON. |
+| 429 | O provedor informou limite de uso. |
+| 500 | Falha interna inesperada, com mensagem genérica sem detalhes sensíveis no corpo HTTP. |
+| 502 | Resposta inesperada/inválida da IA ou formato da consulta rejeitado pelo provedor. |
+| 503 | Configuração ausente/inválida, acesso recusado, modelo ausente, conexão indisponível ou falha do serviço. |
+| 504 | Timeout da consulta. Há limite total de 35 segundos e timeout HTTP de 30 segundos. |
 
-## Regras e erros
+Os códigos internos do provedor não são todos repassados diretamente: por exemplo, um 403 do Gemini indica problema na credencial do servidor, não uma proibição ao usuário da nossa API, e resulta em 503 com orientação.
 
-Textos: 1–100 caracteres, sem aceitar espaços vazios. Produtos: 1–20 itens. Tempo: inteiro de 5–120 minutos. Nível: iniciante, intermediario ou avancado. Corpo do pedido limitado a 16 KB, inclusive quando enviado em partes.
-
-400: campos inválidos; 404: rota inexistente; 413: pedido grande demais; 429: limite do provedor; 502: resposta incompleta/inválida da IA; 503: configuração ausente ou IA indisponível; 504: tempo de espera excedido.
-
-O prompt separa regras dos dados e limita a tarefa à maquiagem. A validação garante os nomes dos produtos nas etapas e o tempo total, mas não garante que todo o texto livre esteja correto. Revisão com pedidos reais, incluindo tentativas de desviar as instruções, ainda é necessária. Não fazemos diagnóstico de pele nem prometemos segurança para alergias.
-
-## Testar
+## Testes automatizados
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-Os testes simulam o provedor para verificar sucesso, erros, timeout e respostas incorretas. Para demonstrar essas falhas, execute os testes e explique que são simulações; não apresente isso como falha real do Gemini.
+Na revisão de 27/09/2026, **25 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
 
-## Cenários verificados
+Também foram observadas consultas reais bem-sucedidas: festa com quatro produtos em 15 minutos e faculdade com blush e batom rosa em cinco minutos. Uma tentativa de desviar o estilo para uma receita de bolo manteve a tarefa no exemplo testado; isso não garante resistência a qualquer ataque.
 
-- Consulta real: festa à noite, quatro produtos e 15 minutos; resposta 200.
-- Consulta real: faculdade, blush e batom rosa, cinco minutos; resposta 200.
-- Tempo zero: resposta 400, identificando tempo_minutos.
-- Tentativa de mudar a tarefa para receita de bolo: manteve maquiagem no teste observado. Isso não garante resistência a qualquer prompt injection.
-- Revisão do prompt após sugestão de usar batom como blush: novos exemplos respeitaram as regiões de aplicação. Conteúdo livre ainda pode conter erros.
-- Laboratório local: 429, 503 e 504 reproduzidos sem consultar o Gemini.
-- 11 testes automatizados da API e arquivos públicos, com provedor simulado.
+## Demonstrar falhas pelo Swagger
 
-O programa é executado localmente; publicar o código no GitHub não hospeda a aplicação. Cada pessoa que executar consultas reais precisa configurar seu acesso ao Gemini. Não há autenticação de usuários ou limitação local de requisições: o servidor está previsto para demonstração local, não para exposição pública sem adaptações.
+A API real trata 429, 503 e 504 quando eles ocorrem. Para apresentar o tratamento sem esgotar quotas ou depender de uma indisponibilidade real, use um processo separado. **A falha do provedor é simulada; o tratamento de erros é o mesmo da aplicação.**
 
-## Roteiro de apresentação
-
-2 min: problema e público. 3 min: fluxo da API, prompt e regras. 5 min: demonstração. 3 min: entradas inválidas e falhas simuladas identificadas. 2 min: perguntas. As duas integrantes devem entender o fluxo e a proteção da chave.
-
-## Interface
-
-Abra http://127.0.0.1:8000/ com o servidor rodando. Use Preencher com um exemplo e depois Criar meu passo a passo.
-
-- `static/index.html`: estrutura do formulário e da área de resultado.
-- `static/style.css`: cores, espaçamentos e adaptação para celular.
-- `static/app.js`: monta o JSON, envia à mesma rota POST /maquiagens e apresenta a resposta.
-
-A interface bloqueia envios duplicados durante o carregamento, mantém os campos após uma falha e apresenta o conteúdo da IA como texto (sem executar HTML). Não armazena a chave nem faz acesso direto ao Gemini.
-
-## Demonstração reproduzível de falhas
-
-Mantenha o servidor principal na porta 8000. Abra outro terminal nesta pasta e execute:
+Abra outro terminal nesta pasta:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn demo:app --host 127.0.0.1 --port 8001
 ```
 
-Abra http://127.0.0.1:8001/demonstracao. Escolha limite (429), demora (504) ou indisponibilidade (503). Todos os resultados são explicitamente simulados. O transporte HTTPX é substituído por MockTransport somente neste processo separado, sem acesso ao Gemini, usando credenciais fictícias. A mesma função consultar_ia trata o erro; o laboratório não retorna mensagens prontas por uma rota alternativa. O timeout é provocado após dois segundos para abreviar a apresentação, não representa uma espera real de 35 segundos. O timeout total continua coberto pelo limite no código; esta simulação exercita o tratamento de ReadTimeout.
+Abra **http://127.0.0.1:8001/docs**, cujo título identifica a simulação. Expanda POST `/maquiagens`, clique em **Try it out** e envie um pedido válido. No campo de cabeçalho `X-Demo-Scenario`, escolha:
 
-Explique antes de executar: "Agora vamos simular falhas do provedor para demonstrar a resposta da nossa API." Mostre carregamento, código HTTP, mensagem legível e uma segunda execução para demonstrar que o servidor segue disponível. Ctrl+C encerra apenas o servidor do terminal selecionado.
+| Cenário | Falha simulada | Retorno esperado |
+|---|---|---|
+| `limite` | Gemini responde 429 | 429 |
+| `demora` | Cliente HTTP gera ReadTimeout | 504 |
+| `indisponivel` | Gemini responde 503 | 503 |
+
+O transporte HTTPX é substituído por `MockTransport` somente no processo demo. Nenhuma chamada sai para o Gemini e são usadas credenciais fictícias. A espera é abreviada para dois segundos: não equivale a esperar o limite real de 35 segundos, que tem teste automatizado próprio. Reinicie o servidor demo ao alterar seu código.
+
+Explique antes: “Vamos simular uma falha do provedor para verificar como nossa API responde.” Não apresente esses cenários como incidentes reais. A API normal permanece na porta 8000. Pedidos inválidos continuam sendo recusados antes da consulta simulada.
+
+## Limites conhecidos
+
+- Não existe um catálogo para validar semanticamente qualquer nome de cosmético. Bloquear `string` não resolve todo texto sem sentido.
+- O prompt delimita a tarefa e orienta usos adequados, mas não garante ausência de alucinações ou resistência absoluta a prompt injection.
+- A verificação de produtos examina os nomes declarados nas etapas; as instruções, proposta e alternativa simples continuam sendo texto livre e podem conter erros.
+- Não há autenticação ou limite local por usuário/IP. O 429 é o limite informado pelo provedor, não uma contagem de cliques no Swagger.
+- O projeto foi preparado para execução e demonstração locais; exposição pública exige adaptações.
+
+## Apresentação do Trabalho 1 — 15 minutos
+
+1. **Introdução (2 min):** problema, público e categoria Geração de Conteúdo.
+2. **Arquitetura e prompt (3 min):** modelos de entrada/saída, regras, chave no ambiente e chamada ao Gemini.
+3. **Demonstração (5 min):** GET de saúde e POST válido pelo Swagger, explicando pedido e resposta.
+4. **Erros e limites (3 min):** entrada inválida na API real e falhas do provedor identificadas como simulações no Swagger da porta 8001.
+5. **Perguntas (2 min):** decisões e limitações.
+
+Entregar o link do repositório, este README e o material de apresentação. A demonstração real depende de internet e quota do Gemini. A interface experimental não faz parte deste roteiro.
+
+## Referências
+
+- [FastAPI: corpo do pedido](https://fastapi.tiangolo.com/tutorial/body/)
+- [Gemini: chaves de API](https://ai.google.dev/gemini-api/docs/api-key)
+- [Gemini: respostas estruturadas](https://ai.google.dev/gemini-api/docs/generate-content/structured-output)
