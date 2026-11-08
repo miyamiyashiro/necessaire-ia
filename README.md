@@ -1,8 +1,8 @@
-# Necessaire IA — Trabalho 1
+# Necessaire IA 
 
-API Web em Python que integra o Gemini para gerar um plano de maquiagem com os produtos disponíveis, considerando ocasião, estilo, experiência e tempo. Categoria: **Geração de Conteúdo**.
-
-**Esta entrega e sua apresentação têm foco no backend. O consumo da API é demonstrado pelo Swagger.** A interface experimental em `static/` está preservada no repositório, mas não é necessária para acompanhar a demonstração do Trabalho 1. Não há deploy público: a execução é local.
+API em Python (FastAPI + Gemini) que monta um passo a passo de maquiagem
+personalizado a partir dos produtos que a pessoa já tem, da ocasião, do estilo,
+do nível de experiência e do tempo disponível.
 
 ## Arquitetura
 
@@ -19,8 +19,6 @@ Pedido JSON pelo Swagger → validação com Pydantic → prompt e consulta HTTP
 Tecnologias: Python, FastAPI, Pydantic, HTTPX, Uvicorn e python-dotenv.
 
 ## Executar no Windows
-
-Pré-requisitos: Python 3.11 ou superior (testado com 3.12 e 3.14), Git e acesso à API Gemini para as consultas reais.
 
 ```powershell
 git clone https://github.com/miyamiyashiro/necessaire-ia.git
@@ -138,8 +136,6 @@ Abra **http://127.0.0.1:8001/docs**, cujo título identifica a simulação. Expa
 
 O transporte HTTPX é substituído por `MockTransport` somente no processo demo. Nenhuma chamada sai para o Gemini e são usadas credenciais fictícias. A espera é abreviada para dois segundos: não equivale a esperar o limite real de 35 segundos, que tem teste automatizado próprio. Reinicie o servidor demo ao alterar seu código.
 
-Explique antes: “Vamos simular uma falha do provedor para verificar como nossa API responde.” Não apresente esses cenários como incidentes reais. A API normal permanece na porta 8000. Pedidos inválidos continuam sendo recusados antes da consulta simulada.
-
 ## Limites conhecidos
 
 - Não existe um catálogo para validar semanticamente qualquer nome de cosmético. Bloquear `string` não resolve todo texto sem sentido.
@@ -147,16 +143,6 @@ Explique antes: “Vamos simular uma falha do provedor para verificar como nossa
 - A verificação de produtos examina os nomes declarados nas etapas; as instruções, proposta e alternativa simples continuam sendo texto livre e podem conter erros.
 - Não há autenticação ou limite local por usuário/IP. O 429 é o limite informado pelo provedor, não uma contagem de cliques no Swagger.
 - O projeto foi preparado para execução e demonstração locais; exposição pública exige adaptações.
-
-## Apresentação do Trabalho 1 — 15 minutos
-
-1. **Introdução (2 min):** problema, público e categoria Geração de Conteúdo.
-2. **Arquitetura e prompt (3 min):** modelos de entrada/saída, regras, chave no ambiente e chamada ao Gemini.
-3. **Demonstração (5 min):** GET de saúde e POST válido pelo Swagger, explicando pedido e resposta.
-4. **Erros e limites (3 min):** entrada inválida na API real e falhas do provedor identificadas como simulações no Swagger da porta 8001.
-5. **Perguntas (2 min):** decisões e limitações.
-
-Entregar o link do repositório, este README e o material de apresentação. A demonstração real depende de internet e quota do Gemini. A interface experimental não faz parte deste roteiro.
 
 ## Referências
 
