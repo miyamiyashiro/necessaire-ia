@@ -1,6 +1,42 @@
 // O navegador coleta os campos. A chave da IA permanece somente no servidor.
 const $ = (id) => document.getElementById(id);
 const form = $('make-form');
+let planoAtual = null;
+function textoValido(valor) {
+  const texto = valor.trim();
+  return texto.length > 0 && texto.length <= 100 && texto.toLowerCase() !== 'string' && /[^\p{C}\p{Z}]/u.test(texto);
+}
+function textoDoPlano(plano) {
+  const total = plano.etapas.reduce((soma, etapa) => soma + etapa.minutos, 0);
+  return [plano.titulo, plano.proposta, `Tempo estimado: ${total} minutos`,
+    ...plano.etapas.map((etapa, i) => `${i + 1}. ${etapa.produto} (${etapa.minutos} min)\n${etapa.instrucao}`),
+    `Opção simples\n${plano.opcao_simples}`,
+    'Sugestão gerada por IA. Os tempos são estimados; siga as indicações dos produtos.'
+  ].join('\n\n');
+}
+$('copy-plan').addEventListener('click', async () => {
+  if (!planoAtual) return;
+  const planoCopiado = planoAtual;
+  const texto = textoDoPlano(planoCopiado);
+  $('copy-plan').disabled = true;
+  try {
+    await navigator.clipboard.writeText(texto);
+    if (planoAtual === planoCopiado) {
+      $('copy-status').textContent = 'Plano copiado! Agora é só colar onde quiser.';
+      $('manual-copy').hidden = true;
+    }
+  } catch {
+    if (planoAtual === planoCopiado) {
+      $('copy-status').textContent = 'A cópia automática não está disponível. Copie o texto selecionado abaixo.';
+      $('copy-text').value = texto;
+      $('manual-copy').hidden = false;
+      $('copy-text').focus();
+      $('copy-text').select();
+    }
+  } finally {
+    $('copy-plan').disabled = false;
+  }
+});
 $('example').addEventListener('click', () => {
   $('ocasiao').value = 'Festa à noite';
   $('estilo').value = 'Marcante';
@@ -19,6 +55,7 @@ function mostrarErro(message) {
   $('empty').hidden = true;
 }
 function mostrarPlano(plano) {
+  planoAtual = plano;
   // textContent trata a resposta como texto, sem executar HTML vindo da IA.
   $('title').textContent = plano.titulo;
   $('proposal').textContent = plano.proposta;
@@ -42,17 +79,21 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   if ($('fields').disabled) return;
   for (const id of ['ocasiao', 'estilo']) {
-    if (!$(id).value.trim()) {
-      $(id).setCustomValidity('Preencha este campo com um texto.'); $(id).reportValidity(); return;
+    if (!textoValido($(id).value)) {
+      $(id).setCustomValidity('Informe um texto visível de até 100 caracteres e substitua o exemplo string.'); $(id).reportValidity(); return;
     }
   }
   const produtos = $('produtos').value.split(/[,\n]/).map(p => p.trim()).filter(Boolean);
-  if (!produtos.length || produtos.length > 20 || produtos.some(p => p.length > 100)) {
-    $('produtos').setCustomValidity('Informe de 1 a 20 produtos, com até 100 caracteres cada.');
+  if (!produtos.length || produtos.length > 20 || produtos.some(p => !textoValido(p))) {
+    $('produtos').setCustomValidity('Informe de 1 a 20 produtos com texto visível de até 100 caracteres cada. Substitua o exemplo string.');
     $('produtos').reportValidity(); return;
   }
   const pedido = {ocasiao: $('ocasiao').value.trim(), estilo: $('estilo').value.trim(), nivel: $('nivel').value, tempo_minutos: Number($('tempo').value), produtos};
   $('fields').disabled = true;
+  planoAtual = null;
+  $('copy-status').textContent = '';
+  $('manual-copy').hidden = true;
+  $('copy-text').value = '';
   $('result-region').setAttribute('aria-busy', 'true');
   for (const id of ['empty', 'result', 'error']) $(id).hidden = true;
   $('loading').hidden = false;
@@ -67,7 +108,7 @@ form.addEventListener('submit', async (event) => {
     if (!dados || !Array.isArray(dados.etapas) || !dados.etapas.length) throw new Error('O plano recebido está incompleto. Tente novamente.');
     mostrarPlano(dados);
   } catch (error) {
-    const message = error.name === 'AbortError' ? 'A resposta demorou demais. Aguarde um pouco e tente novamente.' : error instanceof TypeError ? 'Não foi possível conectar ao servidor. Confira se ele está rodando e tente novamente.' : error.message;
+    const message = error.name === 'AbortError' ? 'A resposta demorou demais. Aguarde um pouco e tente novamente.' : error instanceof TypeError ? 'Não foi possível conectar ao serviço. Confira sua conexão e tente novamente em instantes.' : error.message;
     mostrarErro(message);
     $('status').textContent = 'Não foi possível concluir. Confira a mensagem de erro.';
   } finally {
