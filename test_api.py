@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from main import app
 
 PEDIDO = {'ocasiao': 'festa', 'estilo': 'simples', 'nivel': 'iniciante', 'tempo_minutos': 10, 'produtos': ['batom']}
-PLANO = {'titulo': 'Batom em destaque', 'proposta': 'Uma proposta simples.', 'etapas': [{'produto': 'batom', 'instrucao': 'Aplique nos labios.', 'minutos': 2}], 'opcao_simples': 'Use uma camada leve do batom.'}
+PLANO = {'titulo': 'Batom em destaque', 'proposta': 'Uma proposta simples.', 'etapas': [{'produto': 'batom', 'instrucao': 'Aplique nos labios.', 'minutos': 2}], 'opcao_simples': 'Use uma camada leve do batom.', 'orientacao_tempo': 'A aplicação simples não precisa ocupar todo o tempo disponível.'}
 
 class TestAPI(unittest.TestCase):
     def setUp(self):
@@ -32,6 +32,28 @@ class TestAPI(unittest.TestCase):
         r = self.enviar(self.resposta())
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()['etapas'][0]['produto'], 'batom')
+
+    def test_orientacao_tempo_obrigatoria(self):
+        for valor in ['', '   ', 'x' * 801, None]:
+            with self.subTest(valor=valor):
+                self.assertEqual(self.enviar(self.resposta(plano=dict(PLANO, orientacao_tempo=valor))).status_code, 502)
+        incompleto = dict(PLANO)
+        del incompleto['orientacao_tempo']
+        self.assertEqual(self.enviar(self.resposta(plano=incompleto)).status_code, 502)
+
+    def test_tempo_folgado_nao_precisa_ser_preenchido(self):
+        with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta()):
+            r = self.client.post('/maquiagens', json=dict(PEDIDO, tempo_minutos=120))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(sum(e['minutos'] for e in r.json()['etapas']), 2)
+        self.assertEqual(r.json()['orientacao_tempo'], PLANO['orientacao_tempo'])
+
+    def test_plano_simplificado_mantem_aviso(self):
+        plano = dict(PLANO, orientacao_tempo='Para 5 minutos, priorizamos o batom e omitimos o esfumado elaborado.')
+        with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta(plano=plano)):
+            r = self.client.post('/maquiagens', json=dict(PEDIDO, estilo='Esfumado elaborado', tempo_minutos=5))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['orientacao_tempo'], plano['orientacao_tempo'])
 
     def test_entrada_invalida_nao_consulta_ia(self):
         with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:

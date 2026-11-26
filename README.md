@@ -114,7 +114,7 @@ No Swagger, expanda POST `/maquiagens`, clique em **Try it out**, use o exemplo 
 }
 ```
 
-A resposta 200 contém `titulo`, `proposta`, `etapas` (produto, instrução e minutos) e `opcao_simples`. O texto varia entre gerações. A aplicação confere os nomes dos produtos declarados nas etapas e se a soma dos minutos não ultrapassa o tempo solicitado.
+A resposta 200 contém `titulo`, `proposta`, `etapas` (produto, instrução e minutos) `opcao_simples` e `orientacao_tempo`. O texto varia entre gerações. A aplicação confere os nomes dos produtos declarados nas etapas e se a soma dos minutos não ultrapassa o tempo solicitado.
 
 ## Validações e erros
 
@@ -149,7 +149,7 @@ Os códigos internos do provedor não são todos repassados diretamente: por exe
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-Na execução local de 17/11/2026, **25 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
+Na execução local de 25/11/2026, **28 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
 
 Também foram observadas consultas reais bem-sucedidas: festa com quatro produtos em 15 minutos e faculdade com blush e batom rosa em cinco minutos. Uma tentativa de desviar o estilo para uma receita de bolo manteve a tarefa no exemplo testado; isso não garante resistência a qualquer ataque.
 
@@ -162,7 +162,7 @@ Em 21/11/2026, a responsável pelo projeto confirmou manualmente na URL pública
 - Recusa de `string`, campo vazio e tempo abaixo de 5 minutos.
 - Nova geração após corrigir os dados inválidos.
 
-A adaptação a janela estreita foi conferida anteriormente na execução local. A conferência em celular real continua pendente. Os testes automatizados e as simulações de falhas não equivalem a ter observado todos os erros em produção.
+A adaptação a janela estreita foi conferida anteriormente na execução local. A usuária também confirmou o funcionamento em celular real. Os testes automatizados e as simulações de falhas não equivalem a ter observado todos os erros em produção.
 
 ## Demonstrar falhas pelo Swagger (apoio local)
 
@@ -183,6 +183,12 @@ Abra **http://127.0.0.1:8001/docs**, cujo título identifica a simulação. Expa
 | `indisponivel` | Gemini responde 503 | 503 |
 
 O transporte HTTPX é substituído por `MockTransport` somente no processo demo. Nenhuma chamada sai para o Gemini e são usadas credenciais fictícias. A espera é abreviada para dois segundos: não equivale a esperar o limite real de 35 segundos, que tem teste automatizado próprio. Reinicie o servidor demo ao alterar seu código.
+
+## Adequação do tempo
+
+O tempo disponível é um teto, não uma meta a preencher. A IA deve explicar em `orientacao_tempo` quando o acabamento precisa ser simplificado ou quando não é necessário usar todo o tempo. A interface calcula a folga pela diferença entre o tempo disponível e a soma das etapas; o texto copiado inclui essa orientação e a mesma conta.
+
+A API exige a orientação e rejeita planos acima do limite. A plausibilidade das durações depende do modelo, não é garantida pelos testes automatizados de contrato. Para conferir, peça somente base com 120 minutos e uma maquiagem elaborada com esfumado e delineado em 5 minutos.
 
 ## Limites conhecidos
 

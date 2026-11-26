@@ -6,9 +6,17 @@ function textoValido(valor) {
   const texto = valor.trim();
   return texto.length > 0 && texto.length <= 100 && texto.toLowerCase() !== 'string' && /[^\p{C}\p{Z}]/u.test(texto);
 }
+function resumoTempo(total, disponivel) {
+  const folga = disponivel - total;
+  return `Disponível: ${disponivel} min · Plano estimado: ${total} min. ` +
+    (folga > 0 ? `Folga estimada: ${folga} min. Não é necessário ocupar todo o tempo disponível.` :
+      'O plano ocupa o tempo disponível estimado; o ritmo de aplicação pode variar.');
+}
 function textoDoPlano(plano) {
   const total = plano.etapas.reduce((soma, etapa) => soma + etapa.minutos, 0);
   return [plano.titulo, plano.proposta, `Tempo estimado: ${total} minutos`,
+    ...(plano.orientacao_tempo ? [`Sobre o seu tempo: ${plano.orientacao_tempo}`] : []),
+    resumoTempo(total, plano.tempo_disponivel),
     ...plano.etapas.map((etapa, i) => `${i + 1}. ${etapa.produto} (${etapa.minutos} min)\n${etapa.instrucao}`),
     `Opção simples\n${plano.opcao_simples}`,
     'Sugestão gerada por IA. Os tempos são estimados; siga as indicações dos produtos.'
@@ -54,13 +62,15 @@ function mostrarErro(message) {
   $('error').hidden = false;
   $('empty').hidden = true;
 }
-function mostrarPlano(plano) {
-  planoAtual = plano;
+function mostrarPlano(plano, tempoDisponivel) {
+  planoAtual = {...plano, tempo_disponivel: tempoDisponivel};
   // textContent trata a resposta como texto, sem executar HTML vindo da IA.
   $('title').textContent = plano.titulo;
   $('proposal').textContent = plano.proposta;
   $('simple-text').textContent = plano.opcao_simples;
   const total = plano.etapas.reduce((sum, etapa) => sum + etapa.minutos, 0);
+  $('time-guidance').textContent = plano.orientacao_tempo || 'Os tempos são estimados e variam com sua prática.';
+  $('time-summary').textContent = resumoTempo(total, tempoDisponivel);
   $('duration').textContent = `${total} MIN ESTIMADOS · ${plano.etapas.length} ETAPAS`;
   $('steps').replaceChildren();
   for (const etapa of plano.etapas) {
@@ -106,7 +116,7 @@ form.addEventListener('submit', async (event) => {
     try { dados = await resposta.json(); } catch { throw new Error('O servidor enviou uma resposta inesperada. Tente novamente.'); }
     if (!resposta.ok) throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Não foi possível gerar o plano. Confira os campos e tente novamente.');
     if (!dados || !Array.isArray(dados.etapas) || !dados.etapas.length) throw new Error('O plano recebido está incompleto. Tente novamente.');
-    mostrarPlano(dados);
+    mostrarPlano(dados, pedido.tempo_minutos);
   } catch (error) {
     const message = error.name === 'AbortError' ? 'A resposta demorou demais. Aguarde um pouco e tente novamente.' : error instanceof TypeError ? 'Não foi possível conectar ao serviço. Confira sua conexão e tente novamente em instantes.' : error.message;
     mostrarErro(message);
