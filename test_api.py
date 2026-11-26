@@ -99,6 +99,16 @@ class TestAPI(unittest.TestCase):
                 p = Pedido(**dict(PEDIDO, ocasiao='Festa de 15 anos', produtos=[nome]))
                 self.assertEqual(p.produtos, [nome])
 
+    def test_falta_complemento_sem_confundir_com_tempo(self):
+        plano = dict(PLANO, situacao_tempo='falta_complemento', etapas=[],
+                     proposta='Cílios comuns precisam de cola própria para cílios, não informada.')
+        with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta(plano=plano)):
+            r = self.client.post('/maquiagens', json=dict(PEDIDO, produtos=['cílios postiços'], tempo_minutos=120))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['situacao_tempo'], 'falta_complemento')
+        self.assertEqual(r.json()['etapas'], [])
+        self.assertEqual(self.enviar(self.resposta(plano=dict(plano, etapas=PLANO['etapas']))).status_code, 502)
+
     def test_entrada_invalida_nao_consulta_ia(self):
         with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:
             for dados in [dict(PEDIDO, produtos=[]), dict(PEDIDO, ocasiao='   '), dict(PEDIDO, tempo_minutos=0), dict(PEDIDO, nivel='outro')]:

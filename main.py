@@ -67,13 +67,13 @@ class Plano(BaseModel):
     etapas: list[Etapa] = Field(max_length=20)
     opcao_simples: Descricao
     orientacao_tempo: Descricao
-    situacao_tempo: Literal['adequado', 'tempo_de_sobra', 'insuficiente']
+    situacao_tempo: Literal['adequado', 'tempo_de_sobra', 'insuficiente', 'falta_complemento']
 
     @model_validator(mode='after')
     def validar_situacao(self):
-        if self.situacao_tempo == 'insuficiente' and self.etapas:
+        if self.situacao_tempo in ('insuficiente', 'falta_complemento') and self.etapas:
             raise ValueError('Tempo insuficiente deve retornar orientação sem etapas')
-        if self.situacao_tempo != 'insuficiente' and not self.etapas:
+        if self.situacao_tempo not in ('insuficiente', 'falta_complemento') and not self.etapas:
             raise ValueError('Plano viável deve conter etapas')
         return self
 
@@ -123,6 +123,23 @@ orientacao_tempo é obrigatória em todos os planos: explique se o tempo é adeq
 curto para o acabamento desejado ou maior que o necessário, sempre como estimativa.
 Não alegue mínimos universais, médias comprovadas ou economia medida. Tempos variam
 com técnica, produto e prática. Não calcule minutos de folga no texto: a interface faz a conta.
+Antes de montar etapas, confira se algum produto depende de um complemento essencial.
+Explique essa dependência claramente na proposta, inclusive quando houver pouco tempo.
+Não presuma que o complemento está disponível nem o acrescente às etapas como se estivesse.
+Cílios postiços comuns: se não houver cola explicitamente própria para cílios postiços,
+avise que precisam desse adesivo adequado e omita sua aplicação. "Cola" genérica não
+confirma compatibilidade; peça conferir o rótulo. Nunca recomende cola doméstica.
+Cílios explicitamente autoadesivos não exigem cola separada; siga o rótulo.
+Cílios magnéticos dependem do sistema: não exija cola convencional nem presuma que
+qualquer delineador serve; avise para conferir os acessórios exigidos pelo fabricante.
+Não invente dependências: complexidade não significa precisar de outro cosmético.
+Base não exige primer, batom não exige lápis e sombra não exige fixador obrigatoriamente.
+Quando faltar complemento, use os demais produtos utilizáveis e mantenha o aviso na
+proposta. A falta de complemento não é falta de tempo.
+Se nenhum produto puder ser usado sem um complemento ausente, retorne
+situacao_tempo="falta_complemento", etapas=[], título e proposta explicando o item
+faltante, orientacao_tempo informando que aumentar o tempo não resolve essa ausência,
+e opcao_simples convidando a informar o complemento adequado ou escolher outro produto.
 Não invente características da pele, marcas, produtos ou ferramentas disponíveis.
 Em TODAS as partes da resposta (proposta, etapas e opcao_simples), use cada produto
 somente na região indicada pelo seu tipo. Batom e gloss: lábios; blush: bochechas;

@@ -26,7 +26,7 @@ function resumoTempo(total, disponivel) {
       'O plano ocupa o tempo disponível estimado; o ritmo de aplicação pode variar.');
 }
 function textoDoPlano(plano) {
-  if (plano.situacao_tempo === 'insuficiente') {
+  if (['insuficiente', 'falta_complemento'].includes(plano.situacao_tempo)) {
     return [plano.titulo, plano.proposta, plano.orientacao_tempo,
       `Tempo disponível: ${plano.tempo_disponivel} minutos`, plano.opcao_simples,
       'Avaliação estimada por IA; o tempo varia com a prática.'].join('\n\n');
@@ -89,13 +89,13 @@ function mostrarPlano(plano, tempoDisponivel) {
   $('simple-text').textContent = plano.opcao_simples;
   const total = plano.etapas.reduce((sum, etapa) => sum + etapa.minutos, 0);
   $('time-guidance').textContent = plano.orientacao_tempo || 'Os tempos são estimados e variam com sua prática.';
-  const insuficiente = plano.situacao_tempo === 'insuficiente';
-  $('time-summary').textContent = insuficiente ? `Tempo disponível: ${tempoDisponivel} min. Aumente o tempo ou peça um estilo mais simples.` : resumoTempo(total, tempoDisponivel);
+  const insuficiente = ['insuficiente', 'falta_complemento'].includes(plano.situacao_tempo);
+  $('time-summary').textContent = insuficiente ? (plano.situacao_tempo === 'falta_complemento' ? 'Confira o complemento indicado acima antes de usar esse produto.' : `Tempo disponível: ${tempoDisponivel} min. Aumente o tempo ou peça um estilo mais simples.`) : resumoTempo(total, tempoDisponivel);
   $('steps').hidden = insuficiente;
   $('simple-box').hidden = insuficiente;
   $('copy-plan').textContent = insuficiente ? 'Copiar orientação' : 'Copiar plano';
   $('duration').textContent = `${total} MIN ESTIMADOS · ${plano.etapas.length} ETAPAS`;
-  if (insuficiente) $('duration').textContent = 'TEMPO INSUFICIENTE PARA O PEDIDO';
+  if (insuficiente) $('duration').textContent = plano.situacao_tempo === 'falta_complemento' ? 'FALTA UM COMPLEMENTO' : 'TEMPO INSUFICIENTE PARA O PEDIDO';
   $('steps').replaceChildren();
   for (const etapa of plano.etapas) {
     const li = document.createElement('li');
@@ -139,7 +139,7 @@ form.addEventListener('submit', async (event) => {
     let dados;
     try { dados = await resposta.json(); } catch { throw new Error('O servidor enviou uma resposta inesperada. Tente novamente.'); }
     if (!resposta.ok) throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Não foi possível gerar o plano. Confira os campos e tente novamente.');
-    if (!dados || !Array.isArray(dados.etapas) || (!dados.etapas.length && dados.situacao_tempo !== 'insuficiente')) throw new Error('O plano recebido está incompleto. Tente novamente.');
+    if (!dados || !Array.isArray(dados.etapas) || (!dados.etapas.length && !['insuficiente', 'falta_complemento'].includes(dados.situacao_tempo))) throw new Error('O plano recebido está incompleto. Tente novamente.');
     mostrarPlano(dados, pedido.tempo_minutos);
   } catch (error) {
     const message = error.name === 'AbortError' ? 'A resposta demorou demais. Aguarde um pouco e tente novamente.' : error instanceof TypeError ? 'Não foi possível conectar ao serviço. Confira sua conexão e tente novamente em instantes.' : error.message;
