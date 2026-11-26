@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from main import app
 
 PEDIDO = {'ocasiao': 'festa', 'estilo': 'simples', 'nivel': 'iniciante', 'tempo_minutos': 10, 'produtos': ['batom']}
-PLANO = {'titulo': 'Batom em destaque', 'proposta': 'Uma proposta simples.', 'etapas': [{'produto': 'batom', 'instrucao': 'Aplique nos labios.', 'minutos': 2}], 'opcao_simples': 'Use uma camada leve do batom.', 'orientacao_tempo': 'A aplicação simples não precisa ocupar todo o tempo disponível.'}
+PLANO = {'situacao_tempo': 'adequado', 'titulo': 'Batom em destaque', 'proposta': 'Uma proposta simples.', 'etapas': [{'produto': 'batom', 'instrucao': 'Aplique nos labios.', 'minutos': 2}], 'opcao_simples': 'Use uma camada leve do batom.', 'orientacao_tempo': 'A aplicação simples não precisa ocupar todo o tempo disponível.'}
 
 class TestAPI(unittest.TestCase):
     def setUp(self):
@@ -48,12 +48,20 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(sum(e['minutos'] for e in r.json()['etapas']), 2)
         self.assertEqual(r.json()['orientacao_tempo'], PLANO['orientacao_tempo'])
 
-    def test_plano_simplificado_mantem_aviso(self):
-        plano = dict(PLANO, orientacao_tempo='Para 5 minutos, priorizamos o batom e omitimos o esfumado elaborado.')
+    def test_tempo_insuficiente_retorna_aviso_sem_etapas(self):
+        plano = dict(PLANO, situacao_tempo='insuficiente', etapas=[],
+                     orientacao_tempo='Com pouca prática, a maquiagem completa não cabe em 5 minutos.')
         with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta(plano=plano)):
             r = self.client.post('/maquiagens', json=dict(PEDIDO, estilo='Esfumado elaborado', tempo_minutos=5))
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()['orientacao_tempo'], plano['orientacao_tempo'])
+        self.assertEqual(r.json()['etapas'], [])
+        self.assertEqual(r.json()['situacao_tempo'], 'insuficiente')
+
+    def test_situacao_incompativel_com_etapas(self):
+        for plano in [dict(PLANO, etapas=[]), dict(PLANO, situacao_tempo='insuficiente'),
+                      dict(PLANO, situacao_tempo='desconhecido')]:
+            with self.subTest(plano=plano):
+                self.assertEqual(self.enviar(self.resposta(plano=plano)).status_code, 502)
 
     def test_entrada_invalida_nao_consulta_ia(self):
         with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:

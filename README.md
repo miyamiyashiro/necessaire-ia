@@ -114,7 +114,7 @@ No Swagger, expanda POST `/maquiagens`, clique em **Try it out**, use o exemplo 
 }
 ```
 
-A resposta 200 contém `titulo`, `proposta`, `etapas` (produto, instrução e minutos) `opcao_simples` e `orientacao_tempo`. O texto varia entre gerações. A aplicação confere os nomes dos produtos declarados nas etapas e se a soma dos minutos não ultrapassa o tempo solicitado.
+A resposta 200 contém `titulo`, `proposta`, `etapas` (produto, instrução e minutos) `opcao_simples`, `orientacao_tempo` e `situacao_tempo`. O texto varia entre gerações. A aplicação confere os nomes dos produtos declarados nas etapas e se a soma dos minutos não ultrapassa o tempo solicitado.
 
 ## Validações e erros
 
@@ -149,7 +149,7 @@ Os códigos internos do provedor não são todos repassados diretamente: por exe
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-Na execução local de 25/11/2026, **28 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
+Na execução local de 26/11/2026, **29 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
 
 Também foram observadas consultas reais bem-sucedidas: festa com quatro produtos em 15 minutos e faculdade com blush e batom rosa em cinco minutos. Uma tentativa de desviar o estilo para uma receita de bolo manteve a tarefa no exemplo testado; isso não garante resistência a qualquer ataque.
 
@@ -186,9 +186,13 @@ O transporte HTTPX é substituído por `MockTransport` somente no processo demo.
 
 ## Adequação do tempo
 
-O tempo disponível é um teto, não uma meta a preencher. A IA deve explicar em `orientacao_tempo` quando o acabamento precisa ser simplificado ou quando não é necessário usar todo o tempo. A interface calcula a folga pela diferença entre o tempo disponível e a soma das etapas; o texto copiado inclui essa orientação e a mesma conta.
+O tempo disponível é um teto, não uma meta a preencher. A IA avalia o acabamento e o nível de experiência. `situacao_tempo` distingue `adequado`, `tempo_de_sobra` e `insuficiente`.
 
-A API exige a orientação e rejeita planos acima do limite. A plausibilidade das durações depende do modelo, não é garantida pelos testes automatizados de contrato. Para conferir, peça somente base com 120 minutos e uma maquiagem elaborada com esfumado e delineado em 5 minutos.
+Quando o pedido não cabe, a resposta 200 contém uma orientação e `etapas: []`: a tela mostra o aviso, convida a aumentar o tempo ou pedir um estilo mais simples e permite copiar a orientação. Não gera automaticamente outra maquiagem nem mostra zero minutos ou folga. Nos demais casos, etapas são obrigatórias e a soma deve caber no tempo. A interface e a cópia calculam a folga apenas para planos viáveis.
+
+A avaliação de viabilidade continua dependendo do modelo; muitos produtos disponíveis não obrigam seu uso. As vírgulas dentro de parênteses são preservadas no formulário (ex.: sombras (azul, roxo, brilho)).
+
+Em 26/11/2026, uma consulta real com festa, estilo marcante, nível iniciante, 5 minutos e os produtos do caso relatado retornou aviso sem etapas. Os testes automatizados verificam o contrato e rejeitam combinações incoerentes de situação e etapas; não garantem todas as avaliações da IA.
 
 ## Limites conhecidos
 

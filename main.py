@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic_core import PydanticCustomError
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, ValidationError
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
 
 load_dotenv(Path(__file__).with_name('.env'))
 app = FastAPI(title='Necessaire IA', description='Maquiagem com o que você já tem.', version='0.1.0')
@@ -62,9 +62,18 @@ class Plano(BaseModel):
     model_config = ConfigDict(extra='forbid')
     titulo: Texto
     proposta: Descricao
-    etapas: list[Etapa] = Field(min_length=1, max_length=20)
+    etapas: list[Etapa] = Field(max_length=20)
     opcao_simples: Descricao
     orientacao_tempo: Descricao
+    situacao_tempo: Literal['adequado', 'tempo_de_sobra', 'insuficiente']
+
+    @model_validator(mode='after')
+    def validar_situacao(self):
+        if self.situacao_tempo == 'insuficiente' and self.etapas:
+            raise ValueError('Tempo insuficiente deve retornar orientação sem etapas')
+        if self.situacao_tempo != 'insuficiente' and not self.etapas:
+            raise ValueError('Plano viável deve conter etapas')
+        return self
 
 
 PROMPT = '''Você é um assistente de maquiagem estética. Responda em português do Brasil.
@@ -75,16 +84,24 @@ A soma dos minutos das etapas não pode exceder tempo_minutos.
 O tempo disponível é um teto, nunca uma meta a preencher. Estime cada etapa pela
 complexidade, acabamento e experiência; não divida o tempo disponível pelos produtos
 nem aumente durações para ocupar toda a janela. Produtos disponíveis não são etapas obrigatórias.
-Avalie o estilo solicitado, não apenas a quantidade de produtos. Se uma maquiagem
-elaborada não for realisticamente compatível com o tempo, explique em orientacao_tempo
-que a versão completa provavelmente exige mais tempo, diga quais detalhes foram
-omitidos ou simplificados e entregue uma versão essencial que caiba no limite.
-Não prometa executar a versão completa comprimindo artificialmente as etapas.
-Título, proposta e instruções devem descrever essa versão simplificada com honestidade.
+Avalie o acabamento solicitado e a experiência. Iniciante precisa de margem para
+aplicar, conferir e corrigir; não comprima várias técnicas em etapas de um minuto.
+A lista é um estoque disponível, não uma obrigação de usar tudo: muitos produtos,
+sozinhos, não significam que a pessoa pediu uma maquiagem completa.
+Se o resultado solicitado não for viável no tempo e nível informados, retorne
+situacao_tempo="insuficiente", etapas=[] e somente uma orientação, sem montar
+automaticamente outra maquiagem. Explique em proposta e orientacao_tempo que não
+é viável concluir a versão completa nesse tempo, especialmente com pouca prática.
+Em opcao_simples, convide a aumentar o tempo ou pedir um estilo mais simples.
+Não dê instruções passo a passo nem alegue que fez a maquiagem em zero minutos.
+Exemplo: iniciante pedindo pele completa, esfumado e delineado em 5 minutos deve
+receber esse aviso. Considere também pedidos de acabamento marcante para festa,
+sem presumir que uma versão básica equivale ao resultado esperado.
+Se for viável, retorne etapas e situacao_tempo="adequado" ou "tempo_de_sobra".
 Se houver tempo de sobra, explique em orientacao_tempo que não é necessário usar todo
 o tempo disponível e mantenha durações proporcionais à aplicação.
 Exemplos: maquiagem elaborada com esfumado e delineado detalhados em 5 minutos pede
-simplificação explícita; somente base com 120 minutos disponíveis não deve durar 120 minutos.
+um aviso sem etapas; somente base com 120 minutos disponíveis não deve durar 120 minutos.
 orientacao_tempo é obrigatória em todos os planos: explique se o tempo é adequado,
 curto para o acabamento desejado ou maior que o necessário, sempre como estimativa.
 Não alegue mínimos universais, médias comprovadas ou economia medida. Tempos variam
