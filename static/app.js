@@ -69,7 +69,8 @@ $('example').addEventListener('click', () => {
   $('nivel').value = 'iniciante';
   $('tempo').value = '15';
   $('produtos').value = 'corretivo, blush, máscara de cílios, batom vermelho';
-  $('produtos').setCustomValidity('');
+  // Alterar value por código não dispara input nem limpa erros anteriores.
+  for (const id of ['ocasiao', 'estilo', 'produtos']) $(id).setCustomValidity('');
   $('ocasiao').focus();
 });
 for (const id of ['ocasiao', 'estilo', 'produtos']) {
