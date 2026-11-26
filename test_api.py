@@ -81,6 +81,24 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()['etapas'][0]['produto'], item)
 
+    def test_texto_sem_letras_barrado_antes_da_ia(self):
+        with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:
+            for valor in ['3', ' 123 ', '3.5', '-10', '１２３', '!!!', '💄']:
+                for campo in ['ocasiao', 'estilo', 'produtos']:
+                    with self.subTest(valor=valor, campo=campo):
+                        dados = dict(PEDIDO, **{campo: [valor] if campo == 'produtos' else valor})
+                        r = self.client.post('/maquiagens', json=dados)
+                        self.assertEqual(r.status_code, 400)
+                        self.assertIn('letras', r.text)
+            consulta.assert_not_called()
+
+    def test_nomes_com_letras_e_numeros_permitidos(self):
+        from main import Pedido
+        for nome in ['base cor 3', 'batom 24h', 'sombra nº 12', 'pó', '3CE blush']:
+            with self.subTest(nome=nome):
+                p = Pedido(**dict(PEDIDO, ocasiao='Festa de 15 anos', produtos=[nome]))
+                self.assertEqual(p.produtos, [nome])
+
     def test_entrada_invalida_nao_consulta_ia(self):
         with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:
             for dados in [dict(PEDIDO, produtos=[]), dict(PEDIDO, ocasiao='   '), dict(PEDIDO, tempo_minutos=0), dict(PEDIDO, nivel='outro')]:

@@ -29,6 +29,8 @@ def rejeitar_exemplo(valor: str) -> str:
         raise PydanticCustomError('texto_exemplo', 'Substitua string por uma informação real.')
     if not any(not unicodedata.category(c).startswith(('C', 'Z')) for c in valor):
         raise PydanticCustomError('texto_invisivel', 'Informe um texto visível, não apenas espaços ou caracteres invisíveis.')
+    if not any(unicodedata.category(c).startswith("L") for c in valor):
+        raise PydanticCustomError("texto_sem_letras", "Informe um nome com letras, não apenas números ou símbolos.")
     return valor
 
 
@@ -165,6 +167,8 @@ def descrever_erro(erro):
         mensagem = 'Substitua string por uma informação real, como festa, natural ou blush.'
     elif tipo == 'texto_invisivel':
         mensagem = 'Informe texto visível, não apenas espaços ou caracteres invisíveis.'
+    elif tipo == 'texto_sem_letras':
+        mensagem = 'Informe um nome com letras, não apenas números ou símbolos (ex.: base cor 3).'
     elif tipo == 'missing':
         mensagem = 'Campo obrigatório.'
     elif tipo == 'extra_forbidden':

@@ -4,7 +4,7 @@ const form = $('make-form');
 let planoAtual = null;
 function textoValido(valor) {
   const texto = valor.trim();
-  return texto.length > 0 && texto.length <= 100 && texto.toLowerCase() !== 'string' && /[^\p{C}\p{Z}]/u.test(texto);
+  return texto.length > 0 && texto.length <= 100 && texto.toLowerCase() !== 'string' && /\p{L}/u.test(texto);
 }
 function separarProdutos(texto) {
   const itens = []; let atual = ''; let parenteses = 0;
@@ -113,12 +113,12 @@ form.addEventListener('submit', async (event) => {
   if ($('fields').disabled) return;
   for (const id of ['ocasiao', 'estilo']) {
     if (!textoValido($(id).value)) {
-      $(id).setCustomValidity('Informe um texto visível de até 100 caracteres e substitua o exemplo string.'); $(id).reportValidity(); return;
+      $(id).setCustomValidity('Informe um texto com letras, de até 100 caracteres. Não use apenas números ou símbolos nem o exemplo string.'); $(id).reportValidity(); return;
     }
   }
   const produtos = separarProdutos($('produtos').value);
   if (!produtos.length || produtos.length > 20 || produtos.some(p => !textoValido(p))) {
-    $('produtos').setCustomValidity('Informe de 1 a 20 produtos com texto visível de até 100 caracteres cada. Substitua o exemplo string.');
+    $('produtos').setCustomValidity('Informe de 1 a 20 produtos com nomes de até 100 caracteres e pelo menos uma letra (ex.: base cor 3). Não use apenas números ou símbolos nem o exemplo string.');
     $('produtos').reportValidity(); return;
   }
   const pedido = {ocasiao: $('ocasiao').value.trim(), estilo: $('estilo').value.trim(), nivel: $('nivel').value, tempo_minutos: Number($('tempo').value), produtos};
