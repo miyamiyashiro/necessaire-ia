@@ -149,7 +149,7 @@ Os códigos internos do provedor não são todos repassados diretamente: por exe
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-Na execução local de 26/11/2026, **34 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
+Na execução local de 26/11/2026, **35 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
 
 Também foram observadas consultas reais bem-sucedidas: festa com quatro produtos em 15 minutos e faculdade com blush e batom rosa em cinco minutos. Uma tentativa de desviar o estilo para uma receita de bolo manteve a tarefa no exemplo testado; isso não garante resistência a qualquer ataque.
 
@@ -197,6 +197,8 @@ A avaliação de viabilidade continua dependendo do modelo; muitos produtos disp
 Em 26/11/2026, uma consulta real com festa, estilo marcante, nível iniciante, 5 minutos e os produtos do caso relatado retornou aviso sem etapas. Os testes automatizados verificam o contrato e rejeitam combinações incoerentes de situação e etapas; não garantem todas as avaliações da IA.
 
 Os campos ocasião, estilo e cada produto precisam conter pelo menos uma letra. Entradas como `3`, `123` ou apenas símbolos são bloqueadas no formulário e retornam 400 na API antes de consultar o Gemini. Nomes como `base cor 3` continuam válidos. Isso não substitui validação semântica de cosméticos.
+
+Os nomes de produtos permitidos também são enviados como `enum` no JSON Schema de cada consulta. Isso evita que a geração crie nomes compostos novos, como juntar cílios e cola em um rótulo ausente do pedido. A validação posterior continua ativa.
 
 ## Complementos necessários
 

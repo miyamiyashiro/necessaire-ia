@@ -128,7 +128,14 @@ Explique essa dependência claramente na proposta, inclusive quando houver pouco
 Não presuma que o complemento está disponível nem o acrescente às etapas como se estivesse.
 Cílios postiços comuns: se não houver cola explicitamente própria para cílios postiços,
 avise que precisam desse adesivo adequado e omita sua aplicação. "Cola" genérica não
-confirma compatibilidade; peça conferir o rótulo. Nunca recomende cola doméstica.
+confirma compatibilidade; peça informar "cola própria para cílios postiços" após
+conferir o rótulo. Nesse caso omita cílios e cola, mas gere etapas dos outros produtos
+utilizáveis; não classifique o plano inteiro como falta_complemento se há base,
+corretivo ou blush disponíveis. Nunca recomende cola doméstica.
+Se houver cola explicitamente própria para cílios e cílios comuns, a dependência
+está atendida: pode incluí-los se o tempo permitir, seguindo as instruções do fabricante.
+Ao usar dois itens juntos, produto deve continuar sendo UM nome exato da lista;
+mencione o complemento em instrucao. Não concatene "cílios + cola" em produto.
 Cílios explicitamente autoadesivos não exigem cola separada; siga o rótulo.
 Cílios magnéticos dependem do sistema: não exija cola convencional nem presuma que
 qualquer delineador serve; avise para conferir os acessórios exigidos pelo fabricante.
@@ -256,12 +263,15 @@ async def consultar_ia(pedido: Pedido, transport=None) -> Plano:
     modelo = os.getenv('GEMINI_MODEL', '').strip()
     if not chave or not re.fullmatch(r'[a-zA-Z0-9.\-]+', modelo):
         raise HTTPException(503, 'Configure GEMINI_API_KEY e GEMINI_MODEL no arquivo .env do servidor.')
+    # Restringe os nomes na própria geração, além de conferir a resposta depois.
+    esquema = Plano.model_json_schema()
+    esquema['$defs']['Etapa']['properties']['produto']['enum'] = list(dict.fromkeys(pedido.produtos))
     payload = {
         'systemInstruction': {'parts': [{'text': PROMPT}]},
         'contents': [{'role': 'user', 'parts': [{'text': pedido.model_dump_json()}]}],
         'generationConfig': {
             'responseMimeType': 'application/json',
-            'responseJsonSchema': Plano.model_json_schema(),
+            'responseJsonSchema': esquema,
         },
     }
     try:

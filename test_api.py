@@ -109,6 +109,18 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(r.json()['etapas'], [])
         self.assertEqual(self.enviar(self.resposta(plano=dict(plano, etapas=PLANO['etapas']))).status_code, 502)
 
+    def test_schema_restringe_produtos_a_lista_do_pedido(self):
+        produtos = ['Base matte', 'cílios postiço', 'cola própria para cílios']
+        plano = dict(PLANO, etapas=[{'produto': 'cílios postiço',
+            'instrucao': 'Use a cola própria conforme o fabricante.', 'minutos': 5}])
+        with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta(plano=plano)) as chamada:
+            r = self.client.post('/maquiagens', json=dict(PEDIDO, produtos=produtos))
+        self.assertEqual(r.status_code, 200)
+        schema = chamada.call_args.kwargs['json']['generationConfig']['responseJsonSchema']
+        self.assertEqual(schema['$defs']['Etapa']['properties']['produto']['enum'], produtos)
+        from main import Plano
+        self.assertNotIn('enum', Plano.model_json_schema()['$defs']['Etapa']['properties']['produto'])
+
     def test_entrada_invalida_nao_consulta_ia(self):
         with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:
             for dados in [dict(PEDIDO, produtos=[]), dict(PEDIDO, ocasiao='   '), dict(PEDIDO, tempo_minutos=0), dict(PEDIDO, nivel='outro')]:
