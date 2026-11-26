@@ -63,6 +63,24 @@ class TestAPI(unittest.TestCase):
             with self.subTest(plano=plano):
                 self.assertEqual(self.enviar(self.resposta(plano=plano)).status_code, 502)
 
+    def test_blush_com_tempo_de_sobra(self):
+        plano = dict(PLANO, situacao_tempo='tempo_de_sobra', etapas=[
+            {'produto': 'blush roxo claro', 'instrucao': 'Aplique nas bochechas.', 'minutos': 3}])
+        with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta(plano=plano)):
+            r = self.client.post('/maquiagens', json=dict(PEDIDO, estilo='Marcante',
+                tempo_minutos=120, produtos=['blush roxo claro']))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['situacao_tempo'], 'tempo_de_sobra')
+        self.assertEqual(len(r.json()['etapas']), 1)
+
+    def test_item_composto_preserva_nome_exato(self):
+        item = 'sombra preta e batom vermelho escuro'
+        plano = dict(PLANO, etapas=[{'produto': item, 'instrucao': 'Aplique o batom nos lábios.', 'minutos': 3}])
+        with patch('main.httpx.AsyncClient.post', new_callable=AsyncMock, return_value=self.resposta(plano=plano)):
+            r = self.client.post('/maquiagens', json=dict(PEDIDO, produtos=[item]))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['etapas'][0]['produto'], item)
+
     def test_entrada_invalida_nao_consulta_ia(self):
         with patch('main.consultar_ia', new_callable=AsyncMock) as consulta:
             for dados in [dict(PEDIDO, produtos=[]), dict(PEDIDO, ocasiao='   '), dict(PEDIDO, tempo_minutos=0), dict(PEDIDO, nivel='outro')]:

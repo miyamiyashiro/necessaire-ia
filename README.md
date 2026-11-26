@@ -149,7 +149,7 @@ Os códigos internos do provedor não são todos repassados diretamente: por exe
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-Na execução local de 26/11/2026, **29 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
+Na execução local de 26/11/2026, **31 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
 
 Também foram observadas consultas reais bem-sucedidas: festa com quatro produtos em 15 minutos e faculdade com blush e batom rosa em cinco minutos. Uma tentativa de desviar o estilo para uma receita de bolo manteve a tarefa no exemplo testado; isso não garante resistência a qualquer ataque.
 
@@ -189,6 +189,8 @@ O transporte HTTPX é substituído por `MockTransport` somente no processo demo.
 O tempo disponível é um teto, não uma meta a preencher. A IA avalia o acabamento e o nível de experiência. `situacao_tempo` distingue `adequado`, `tempo_de_sobra` e `insuficiente`.
 
 Quando o pedido não cabe, a resposta 200 contém uma orientação e `etapas: []`: a tela mostra o aviso, convida a aumentar o tempo ou pedir um estilo mais simples e permite copiar a orientação. Não gera automaticamente outra maquiagem nem mostra zero minutos ou folga. Nos demais casos, etapas são obrigatórias e a soma deve caber no tempo. A interface e a cópia calculam a folga apenas para planos viáveis.
+
+Falta de produtos não deve ser classificada como falta de tempo: a IA deve montar o plano possível com o estoque e explicar as limitações na proposta. Um item composto (ex.: sombra preta e batom vermelho escuro) mantém o nome inteiro nas etapas para preservar a validação de produtos.
 
 A avaliação de viabilidade continua dependendo do modelo; muitos produtos disponíveis não obrigam seu uso. As vírgulas dentro de parênteses são preservadas no formulário (ex.: sombras (azul, roxo, brilho)).
 
