@@ -1,12 +1,25 @@
-# Necessaire IA 
+# Necessaire IA — Trabalho 2
 
-API em Python (FastAPI + Gemini) que monta um passo a passo de maquiagem
+Aplicação web com frontend em HTML, CSS e JavaScript e API em Python (FastAPI + Gemini) que monta um passo a passo de maquiagem
 personalizado a partir dos produtos que a pessoa já tem, da ocasião, do estilo,
 do nível de experiência e do tempo disponível.
 
+## Aplicação publicada
+
+- **Site:** https://necessaire-ia.onrender.com
+- **API/Swagger:** https://necessaire-ia.onrender.com/docs
+- **Saúde:** https://necessaire-ia.onrender.com/saude
+- **Categoria:** Geração e Produtividade.
+
+O usuário preenche o formulário, acompanha o carregamento, recebe etapas organizadas e pode copiar o plano completo. O formulário orienta a correção de entradas inválidas e mostra mensagens de falha sem exigir uma recarga da página.
+
 ## Arquitetura
 
-Pedido JSON pelo Swagger → validação com Pydantic → prompt e consulta HTTP ao Gemini → validação do JSON retornado, produtos das etapas e tempo total → resposta HTTP.
+Navegador (HTML/CSS/JavaScript) → POST /maquiagens em JSON → FastAPI/Pydantic → consulta HTTPS ao Gemini com HTTPX → validação do plano → JSON → resultado na interface.
+
+Frontend e backend são servidos pelo mesmo Web Service no Render. O navegador usa a rota relativa `/maquiagens`, sem endereço localhost fixo e sem precisar de CORS entre domínios diferentes. A chave é usada somente no backend. O texto gerado é inserido com `textContent`, sem executar HTML da IA.
+
+Na parte 1, o foco era consumir a API pelo Swagger. Na parte 2, o fluxo inclui formulário, carregamento, erros visuais, cópia do resultado e hospedagem pública com HTTPS.
 
 - `main.py`: modelos, rotas, prompt, integração e tratamento de erros.
 - `demo.py`: processo separado que simula falhas do provedor, usando o mesmo tratamento de erros.
@@ -14,7 +27,7 @@ Pedido JSON pelo Swagger → validação com Pydantic → prompt e consulta HTTP
 - `exemplo.json`: pedido válido para a demonstração.
 - `.env.example`: modelo de configuração sem segredos.
 - `requirements.txt`: dependências com versões definidas.
-- `static/`: interface experimental preservada, fora do foco desta apresentação.
+- `static/`: frontend da aplicação: formulário, estilos responsivos, consulta à API e cópia do plano.
 
 Tecnologias: Python, FastAPI, Pydantic, HTTPX, Uvicorn e python-dotenv.
 
@@ -48,7 +61,31 @@ Inicie o backend:
 .\.venv\Scripts\python.exe -m uvicorn main:app --reload
 ```
 
-Abra **http://127.0.0.1:8000/docs**. Mantenha o terminal aberto; Ctrl+C encerra o servidor. Reinicie-o após alterar o `.env`. O parâmetro `--reload` é destinado ao desenvolvimento local.
+Abra **http://127.0.0.1:8000/** para usar o site ou **http://127.0.0.1:8000/docs** para testar a API. Mantenha o terminal aberto; Ctrl+C encerra o servidor. Reinicie-o após alterar o `.env`. O parâmetro `--reload` é destinado ao desenvolvimento local.
+
+## Deploy no Render
+
+Crie um **Web Service** conectado a este repositório:
+
+| Configuração | Valor |
+|---|---|
+| Branch | `main` |
+| Runtime | Python 3 |
+| Root Directory | Vazio (arquivos na raiz do repositório) |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| Compute | Free |
+
+Configure duas variáveis **separadas** em Environment Variables:
+
+| Nome (KEY) | Conteúdo (VALUE) |
+|---|---|
+| `GEMINI_API_KEY` | Chave privada da API Gemini |
+| `GEMINI_MODEL` | Nome do modelo habilitado na conta; nesta implantação, `gemini-3.1-flash-lite` |
+
+O nome é o texto antes do `=` no `.env`; o valor é o texto depois. Não envie o arquivo `.env` ao GitHub. Salve as variáveis e aplique um novo deploy. A mensagem de configuração do código ainda menciona `.env`, mas na nuvem as variáveis da plataforma substituem esse arquivo.
+
+O plano gratuito pode suspender o serviço por inatividade: o primeiro acesso pode demorar para carregar. Confira o site antes da apresentação. Quotas da hospedagem e do Gemini são independentes; o funcionamento depende de disponibilidade e quota do provedor.
 
 ## Rotas
 
@@ -59,7 +96,7 @@ Abra **http://127.0.0.1:8000/docs**. Mantenha o terminal aberto; Ctrl+C encerra 
 | GET `/docs` | Swagger: documentação interativa para testar as rotas. |
 | GET `/openapi.json` | Especificação da API. |
 
-`/saúde` foi mantido como alias de compatibilidade, fora do Swagger. A raiz `/` ainda abre a interface experimental, que não será usada na apresentação.
+`/saúde` foi mantido como alias de compatibilidade, fora do Swagger. A raiz `/` abre a interface usada na demonstração da aplicação completa.
 
 A aplicação não armazena planos. Por isso não possui operações de atualização ou exclusão de planos (PUT/DELETE).
 
@@ -112,11 +149,22 @@ Os códigos internos do provedor não são todos repassados diretamente: por exe
 .\.venv\Scripts\python.exe -m unittest -v
 ```
 
-Na revisão de 27/09/2026, **25 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
+Na execução local de 17/11/2026, **25 testes passaram**, vários contendo múltiplos casos. Cobrem entradas inválidas e limites, JSON/UTF-8 incorretos, corpo enviado em partes, respostas malformadas do provedor, rede, timeout HTTP e total, códigos de erro, proteção das mensagens e arquivos públicos. O provedor é simulado nesses testes.
 
 Também foram observadas consultas reais bem-sucedidas: festa com quatro produtos em 15 minutos e faculdade com blush e batom rosa em cinco minutos. Uma tentativa de desviar o estilo para uma receita de bolo manteve a tarefa no exemplo testado; isso não garante resistência a qualquer ataque.
 
-## Demonstrar falhas pelo Swagger
+## Verificação em produção
+
+Em 21/11/2026, a responsável pelo projeto confirmou manualmente na URL pública:
+
+- Geração de plano com integração ao Gemini e apresentação do resultado.
+- Cópia do plano e colagem em editor de texto.
+- Recusa de `string`, campo vazio e tempo abaixo de 5 minutos.
+- Nova geração após corrigir os dados inválidos.
+
+A adaptação a janela estreita foi conferida anteriormente na execução local. A conferência em celular real continua pendente. Os testes automatizados e as simulações de falhas não equivalem a ter observado todos os erros em produção.
+
+## Demonstrar falhas pelo Swagger (apoio local)
 
 A API real trata 429, 503 e 504 quando eles ocorrem. Para apresentar o tratamento sem esgotar quotas ou depender de uma indisponibilidade real, use um processo separado. **A falha do provedor é simulada; o tratamento de erros é o mesmo da aplicação.**
 
@@ -142,7 +190,18 @@ O transporte HTTPX é substituído por `MockTransport` somente no processo demo.
 - O prompt delimita a tarefa e orienta usos adequados, mas não garante ausência de alucinações ou resistência absoluta a prompt injection.
 - A verificação de produtos examina os nomes declarados nas etapas; as instruções, proposta e alternativa simples continuam sendo texto livre e podem conter erros.
 - Não há autenticação ou limite local por usuário/IP. O 429 é o limite informado pelo provedor, não uma contagem de cliques no Swagger.
-- O projeto foi preparado para execução e demonstração locais; exposição pública exige adaptações.
+- A aplicação está publicada para demonstração acadêmica. Sem autenticação ou limitador próprio, a API pública pode consumir a quota compartilhada da chave; esse controle permanece uma melhoria pendente.
+- Não há persistência de planos: recarregar a página remove o resultado da tela. Use Copiar plano para guardar o texto.
+
+## Apresentação — 15 minutos
+
+O roteiro detalhado está em [APRESENTACAO_PARTE_2.md](APRESENTACAO_PARTE_2.md).
+
+1. Visão geral e evolução: 2 minutos.
+2. Arquitetura full stack, deploy e prompt: 3 minutos.
+3. Demonstração na URL pública: 5 minutos.
+4. Resiliência, segurança e limites: 3 minutos.
+5. Perguntas e encerramento: 2 minutos.
 
 ## Referências
 
